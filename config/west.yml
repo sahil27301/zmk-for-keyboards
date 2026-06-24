@@ -5,9 +5,7 @@ manifest:
   projects:
     - name: zmk
       remote: zmkfirmware
-      # Pinned to known-good commit (last working build 2026-04-13).
-      # Floating `main` broke nice_view display rendering on both halves.
-      revision: 8a44ef109ae3
+      revision: main
       import: app/west.yml
   self:
     path: config
