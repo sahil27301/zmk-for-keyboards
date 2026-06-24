@@ -38,11 +38,18 @@
 // Row 2: 24 25 26 27 28 29   30 31 32 33  34  35
 // Thumb:          36 37 38   39 40 41
 
-&mt {
-    flavor = "tap-preferred";
-    tapping-term-ms = <200>;
-    quick-tap-ms = <175>;
-    require-prior-idle-ms = <150>;
+/ {
+    behaviors {
+        hm: homerow_mod {
+            compatible = "zmk,behavior-hold-tap";
+            #binding-cells = <2>;
+            flavor = "balanced";
+            tapping-term-ms = <200>;
+            quick-tap-ms = <175>;
+            require-prior-idle-ms = <150>;
+            hold-trigger-on-release;
+        };
+    };
 };
 
 &lt {
@@ -55,108 +62,11 @@
     combos {
         compatible = "zmk,combos";
 
-        // -- Tier 1: Essential --
-
         combo_caps_word {
             bindings = <&caps_word>;
             key-positions = <16 19>;        // F + J (index home row)
-            timeout-ms = <30>;
-            require-prior-idle-ms = <150>;
-        };
-
-        combo_esc {
-            bindings = <&kp ESC>;
-            key-positions = <2 3>;          // W + E
-            timeout-ms = <30>;
-            require-prior-idle-ms = <150>;
-        };
-
-        combo_bspc {
-            bindings = <&kp BSPC>;
-            key-positions = <8 9>;          // I + O
-            timeout-ms = <30>;
-            require-prior-idle-ms = <150>;
-        };
-
-        combo_del {
-            bindings = <&kp DEL>;
-            key-positions = <9 10>;         // O + P
-            timeout-ms = <30>;
-            require-prior-idle-ms = <150>;
-        };
-
-        // -- Tier 2: High Value --
-
-        combo_tab {
-            bindings = <&kp TAB>;
-            key-positions = <14 15>;        // S + D
-            timeout-ms = <30>;
-            require-prior-idle-ms = <150>;
-        };
-
-        combo_enter {
-            bindings = <&kp RET>;
-            key-positions = <20 21>;        // K + L
-            timeout-ms = <30>;
-            require-prior-idle-ms = <150>;
-        };
-
-        combo_copy {
-            bindings = <&kp LG(C)>;
-            key-positions = <26 27>;        // X + C
-            timeout-ms = <30>;
-            require-prior-idle-ms = <150>;
-        };
-
-        combo_paste {
-            bindings = <&kp LG(V)>;
-            key-positions = <27 28>;        // C + V
-            timeout-ms = <30>;
-            require-prior-idle-ms = <150>;
-        };
-
-        combo_cut {
-            bindings = <&kp LG(X)>;
-            key-positions = <26 28>;        // X + V (skip middle)
-            timeout-ms = <30>;
-            require-prior-idle-ms = <150>;
-        };
-
-        // -- Tier 3: Vertical Symbol Combos --
-
-        combo_minus {
-            bindings = <&kp MINUS>;
-            key-positions = <19 31>;        // J + M (right index vertical)
-            timeout-ms = <40>;
-            require-prior-idle-ms = <100>;
-        };
-
-        combo_underscore {
-            bindings = <&kp UNDER>;
-            key-positions = <18 30>;        // H + N (right inner vertical)
-            timeout-ms = <40>;
-            require-prior-idle-ms = <100>;
-        };
-
-        combo_equal {
-            bindings = <&kp EQUAL>;
-            key-positions = <16 28>;        // F + V (left index vertical)
-            timeout-ms = <40>;
-            require-prior-idle-ms = <100>;
-        };
-
-        combo_grave {
-            bindings = <&kp GRAVE>;
-            key-positions = <14 26>;        // S + X (left ring vertical)
-            timeout-ms = <40>;
-            require-prior-idle-ms = <100>;
-        };
-
-        combo_semi {
-            bindings = <&kp SEMI>;
-            key-positions = <21 22>;        // L + ' (right ring+pinky home)
-            timeout-ms = <30>;
-            require-prior-idle-ms = <150>;
+            timeout-ms = <50>;
+            require-prior-idle-ms = <200>;
         };
     };
 
@@ -178,7 +88,7 @@
             display-name = "BASE";
             bindings = <
 &kp TAB        &kp Q       &kp W       &kp E         &kp R         &kp T          &kp Y       &kp U         &kp I         &kp O        &kp P        &kp BSPC
-&mt LCTRL ESC  &mt LGUI A  &mt LALT S  &mt LCTRL D   &mt LSHFT F   &kp G          &kp H       &mt RSHFT J   &mt RCTRL K   &mt RALT L   &mt RGUI SQT &hyper
+&mt LCTRL ESC  &hm LGUI A  &hm LALT S  &hm LCTRL D   &hm LSHFT F   &kp G          &kp H       &hm RSHFT J   &hm RCTRL K   &hm RALT L   &hm RGUI SQT &hyper
 &kp LSHFT      &kp Z       &kp X       &kp C         &kp V         &kp B          &kp N       &kp M         &kp COMMA     &kp DOT      &kp FSLH     &kp ESC
                                         &lt MEDIA ESC &lt NAV SPACE &lt MOUSE TAB  &lt SYM RET &lt NUM BSPC  &lt FUN DEL
             >;
