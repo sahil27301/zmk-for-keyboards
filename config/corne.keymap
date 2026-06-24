@@ -38,20 +38,6 @@
 // Row 2: 24 25 26 27 28 29   30 31 32 33  34  35
 // Thumb:          36 37 38   39 40 41
 
-/ {
-    behaviors {
-        hm: homerow_mod {
-            compatible = "zmk,behavior-hold-tap";
-            #binding-cells = <2>;
-            flavor = "balanced";
-            tapping-term-ms = <200>;
-            quick-tap-ms = <175>;
-            require-prior-idle-ms = <150>;
-            hold-trigger-on-release;
-        };
-    };
-};
-
 &lt {
     flavor = "balanced";
     tapping-term-ms = <200>;
@@ -59,6 +45,19 @@
 };
 
 / {
+    behaviors {
+        hm: homerow_mod {
+            compatible = "zmk,behavior-hold-tap";
+            #binding-cells = <2>;
+            bindings = <&kp>, <&kp>;
+            flavor = "balanced";
+            tapping-term-ms = <200>;
+            quick-tap-ms = <175>;
+            require-prior-idle-ms = <150>;
+            hold-trigger-on-release;
+        };
+    };
+
     combos {
         compatible = "zmk,combos";
 
