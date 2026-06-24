@@ -9,10 +9,10 @@ include:
 
   # nice!view display (ZMK built-in nice_view shield)
   - board: nice_nano//zmk
-    shield: nice_view_adapter nice_view corne_left
+    shield: corne_left nice_view_adapter nice_view
     snippet: studio-rpc-usb-uart
   - board: nice_nano//zmk
-    shield: nice_view_adapter nice_view corne_right
+    shield: corne_right nice_view_adapter nice_view
 
   - board: nice_nano//zmk
     shield: settings_reset
