@@ -4,7 +4,6 @@
  */
 
 #include <stdbool.h>
-#include <string.h>
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
 LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
@@ -12,7 +11,8 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
 #include <zmk/display.h>
 #include <zmk/display/widgets/battery_status.h>
 #include <zmk/display/widgets/peripheral_status.h>
-#include <zmk/hid.h>
+#include <zmk/event_manager.h>
+#include <zmk/events/modifiers_state_changed.h>
 #include <lvgl.h>
 
 #define MODS_REFRESH_MS 100
@@ -23,7 +23,8 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
 #define MODS_TEXT_LEN   8
 
 static lv_obj_t *mods_label;
-static zmk_mod_flags_t last_mods = (zmk_mod_flags_t)0xFF;
+static zmk_mod_flags_t current_mods;
+static zmk_mod_flags_t last_rendered_mods = (zmk_mod_flags_t)0xFF;
 
 static void format_mods_text(zmk_mod_flags_t mods, char out[MODS_TEXT_LEN]) {
     out[0] = (mods & MOD_CTRL_MASK) ? 'C' : '-';
@@ -37,24 +38,43 @@ static void format_mods_text(zmk_mod_flags_t mods, char out[MODS_TEXT_LEN]) {
 }
 
 static void update_mods_label(bool force) {
-    zmk_mod_flags_t mods = zmk_hid_get_explicit_mods();
-    if (!force && mods == last_mods) {
+    if (!force && current_mods == last_rendered_mods) {
         return;
     }
 
     char mods_text[MODS_TEXT_LEN];
-    format_mods_text(mods, mods_text);
+    format_mods_text(current_mods, mods_text);
     lv_label_set_text(mods_label, mods_text);
     lv_obj_invalidate(mods_label);
 
-    LOG_DBG("Right display mods update: mods=0x%02x text=%s", (unsigned int)mods, mods_text);
-    last_mods = mods;
+    LOG_DBG("Right display mods render: mods=0x%02x text=%s", (unsigned int)current_mods, mods_text);
+    last_rendered_mods = current_mods;
 }
 
 static void mods_timer_cb(lv_timer_t *timer) {
     ARG_UNUSED(timer);
     update_mods_label(false);
 }
+
+static int corne_right_mods_listener(const zmk_event_t *eh) {
+    const struct zmk_modifiers_state_changed *ev = as_zmk_modifiers_state_changed(eh);
+    if (!ev) {
+        return ZMK_EV_EVENT_BUBBLE;
+    }
+
+    if (ev->state) {
+        current_mods |= ev->modifiers;
+    } else {
+        current_mods &= ~(ev->modifiers);
+    }
+
+    LOG_DBG("Right display mods event: state=%d modifiers=0x%02x current=0x%02x",
+            ev->state, (unsigned int)ev->modifiers, (unsigned int)current_mods);
+    return ZMK_EV_EVENT_BUBBLE;
+}
+
+ZMK_LISTENER(corne_right_mods_listener, corne_right_mods_listener);
+ZMK_SUBSCRIPTION(corne_right_mods_listener, zmk_modifiers_state_changed);
 
 /* ── Screen layout (128x32) ──
  *
@@ -71,6 +91,7 @@ static struct zmk_widget_peripheral_status peripheral_widget;
 lv_obj_t *zmk_display_status_screen(void) {
     lv_obj_t *screen = lv_obj_create(NULL);
     LOG_INF("Initializing Corne right custom display with modifiers widget");
+    current_mods = 0;
 
     /* Modifiers state — center */
     mods_label = lv_label_create(screen);
