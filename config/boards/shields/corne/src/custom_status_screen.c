@@ -22,12 +22,16 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
 #define MOD_ALT_MASK         (1u << 2)
 #define MOD_GUI_MASK         (1u << 3)
 #define MODS_TEXT_LEN        8
+#define LEFT_POS_LGUI_A      13
+#define LEFT_POS_LALT_S      14
+#define LEFT_POS_LCTRL_D     15
+#define LEFT_POS_LSHIFT_F    16
 #define RIGHT_POS_RSHIFT_J   19
 #define RIGHT_POS_RCTRL_K    20
 #define RIGHT_POS_RALT_L     21
 #define RIGHT_POS_RGUI_SQT   22
 
-struct right_mod_tracking {
+struct mod_tracking {
     uint32_t position;
     uint8_t mask;
     const char *name;
@@ -39,7 +43,11 @@ struct right_mod_tracking {
 static lv_obj_t *mods_label;
 static uint8_t current_mods;
 static uint8_t last_rendered_mods = 0xFF;
-static struct right_mod_tracking right_mods[] = {
+static struct mod_tracking tracked_mods[] = {
+    {.position = LEFT_POS_LSHIFT_F, .mask = MOD_SHIFT_MASK, .name = "SHIFT_L"},
+    {.position = LEFT_POS_LCTRL_D, .mask = MOD_CTRL_MASK, .name = "CTRL_L"},
+    {.position = LEFT_POS_LALT_S, .mask = MOD_ALT_MASK, .name = "ALT_L"},
+    {.position = LEFT_POS_LGUI_A, .mask = MOD_GUI_MASK, .name = "GUI_L"},
     {.position = RIGHT_POS_RCTRL_K, .mask = MOD_CTRL_MASK, .name = "CTRL"},
     {.position = RIGHT_POS_RSHIFT_J, .mask = MOD_SHIFT_MASK, .name = "SHIFT"},
     {.position = RIGHT_POS_RALT_L, .mask = MOD_ALT_MASK, .name = "ALT"},
@@ -47,14 +55,26 @@ static struct right_mod_tracking right_mods[] = {
 };
 
 static void format_mods_text(uint8_t mods, char out[MODS_TEXT_LEN]) {
-    out[0] = (mods & MOD_CTRL_MASK) ? 'C' : '-';
+    out[0] = (mods & MOD_SHIFT_MASK) ? 'S' : '-';
     out[1] = ' ';
-    out[2] = (mods & MOD_SHIFT_MASK) ? 'S' : '-';
+    out[2] = (mods & MOD_CTRL_MASK) ? 'C' : '-';
     out[3] = ' ';
     out[4] = (mods & MOD_ALT_MASK) ? 'A' : '-';
     out[5] = ' ';
     out[6] = (mods & MOD_GUI_MASK) ? 'G' : '-';
     out[7] = '\0';
+}
+
+static void rebuild_current_mods(void) {
+    uint8_t rebuilt_mods = 0;
+
+    for (size_t i = 0; i < ARRAY_SIZE(tracked_mods); i++) {
+        if (tracked_mods[i].active) {
+            rebuilt_mods |= tracked_mods[i].mask;
+        }
+    }
+
+    current_mods = rebuilt_mods;
 }
 
 static void update_mods_label(bool force) {
@@ -63,30 +83,37 @@ static void update_mods_label(bool force) {
     }
 
     char mods_text[MODS_TEXT_LEN];
-    format_mods_text(current_mods, mods_text);
-    lv_label_set_text(mods_label, mods_text);
+    if (current_mods == 0) {
+        lv_label_set_text(mods_label, "");
+    } else {
+        format_mods_text(current_mods, mods_text);
+        lv_label_set_text(mods_label, mods_text);
+    }
     lv_obj_invalidate(mods_label);
 
-    LOG_DBG("Right display mods render: mods=0x%02x text=%s", (unsigned int)current_mods, mods_text);
+    LOG_DBG("Right display mods render: mods=0x%02x text=%s", (unsigned int)current_mods,
+            current_mods == 0 ? "<hidden>" : mods_text);
     last_rendered_mods = current_mods;
 }
 
 static void update_mods_from_hold_state(void) {
     int64_t now = k_uptime_get();
 
-    for (size_t i = 0; i < ARRAY_SIZE(right_mods); i++) {
-        struct right_mod_tracking *mod = &right_mods[i];
+    for (size_t i = 0; i < ARRAY_SIZE(tracked_mods); i++) {
+        struct mod_tracking *mod = &tracked_mods[i];
         if (!mod->pressed || mod->active) {
             continue;
         }
 
         if ((now - mod->pressed_at) >= RIGHT_HRM_HOLD_MS) {
             mod->active = true;
-            current_mods |= mod->mask;
+            rebuild_current_mods();
             LOG_DBG("Right display mod active: %s position=%u current=0x%02x", mod->name,
                     (unsigned int)mod->position, (unsigned int)current_mods);
         }
     }
+
+    rebuild_current_mods();
 }
 
 static void mods_timer_cb(lv_timer_t *timer) {
@@ -97,12 +124,12 @@ static void mods_timer_cb(lv_timer_t *timer) {
 
 static int corne_right_mods_listener(const zmk_event_t *eh) {
     const struct zmk_position_state_changed *ev = as_zmk_position_state_changed(eh);
-    if (!ev || ev->source != ZMK_POSITION_STATE_CHANGE_SOURCE_LOCAL) {
+    if (!ev) {
         return ZMK_EV_EVENT_BUBBLE;
     }
 
-    for (size_t i = 0; i < ARRAY_SIZE(right_mods); i++) {
-        struct right_mod_tracking *mod = &right_mods[i];
+    for (size_t i = 0; i < ARRAY_SIZE(tracked_mods); i++) {
+        struct mod_tracking *mod = &tracked_mods[i];
         if (ev->position != mod->position) {
             continue;
         }
@@ -117,7 +144,7 @@ static int corne_right_mods_listener(const zmk_event_t *eh) {
             mod->pressed_at = 0;
             if (mod->active) {
                 mod->active = false;
-                current_mods &= ~(mod->mask);
+                rebuild_current_mods();
                 LOG_DBG("Right display mod released: %s position=%u current=0x%02x", mod->name,
                         (unsigned int)ev->position, (unsigned int)current_mods);
             } else {
@@ -126,6 +153,11 @@ static int corne_right_mods_listener(const zmk_event_t *eh) {
             }
         }
     }
+
+    rebuild_current_mods();
+    LOG_DBG("Right display mod event: source=%u position=%u state=%d current=0x%02x",
+            (unsigned int)ev->source, (unsigned int)ev->position, ev->state,
+            (unsigned int)current_mods);
     return ZMK_EV_EVENT_BUBBLE;
 }
 
@@ -148,10 +180,10 @@ lv_obj_t *zmk_display_status_screen(void) {
     lv_obj_t *screen = lv_obj_create(NULL);
     LOG_INF("Initializing Corne right custom display with position-driven modifiers widget");
     current_mods = 0;
-    for (size_t i = 0; i < ARRAY_SIZE(right_mods); i++) {
-        right_mods[i].pressed = false;
-        right_mods[i].active = false;
-        right_mods[i].pressed_at = 0;
+    for (size_t i = 0; i < ARRAY_SIZE(tracked_mods); i++) {
+        tracked_mods[i].pressed = false;
+        tracked_mods[i].active = false;
+        tracked_mods[i].pressed_at = 0;
     }
 
     /* Modifiers state — center */
