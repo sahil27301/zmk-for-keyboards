@@ -54,7 +54,15 @@
             tapping-term-ms = <200>;
             quick-tap-ms = <175>;
             require-prior-idle-ms = <100>;
-            hold-trigger-on-release;
+        };
+
+        hms: homerow_mod_shift {
+            compatible = "zmk,behavior-hold-tap";
+            #binding-cells = <2>;
+            bindings = <&kp>, <&kp>;
+            flavor = "balanced";
+            tapping-term-ms = <200>;
+            quick-tap-ms = <175>;
         };
     };
 
@@ -87,7 +95,7 @@
             display-name = "BASE";
             bindings = <
 &kp TAB        &kp Q       &kp W       &kp E         &kp R         &kp T          &kp Y       &kp U         &kp I         &kp O        &kp P        &kp BSPC
-&mt LCTRL ESC  &hm LGUI A  &hm LALT S  &hm LCTRL D   &hm LSHFT F   &kp G          &kp H       &hm RSHFT J   &hm RCTRL K   &hm RALT L   &hm RGUI SQT &hyper
+&mt LCTRL ESC  &hm LGUI A  &hm LALT S  &hm LCTRL D   &hms LSHFT F  &kp G          &kp H       &hms RSHFT J  &hm RCTRL K   &hm RALT L   &hm RGUI SQT &hyper
 &kp LSHFT      &kp Z       &kp X       &kp C         &kp V         &kp B          &kp N       &kp M         &kp COMMA     &kp DOT      &kp FSLH     &kp ESC
                                         &lt MEDIA ESC &lt NAV SPACE &lt MOUSE TAB  &lt SYM RET &lt NUM BSPC  &lt FUN DEL
             >;
